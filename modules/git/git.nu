@@ -60,13 +60,13 @@ def "nu-complete git log" [] {
 def "nu-complete git branches" [] {
     git branch
     | lines
-    | filter {|x| not ($x | str starts-with '*')}
+    | where {|x| not ($x | str starts-with '*')}
     | each {|x| $"($x|str trim)"}
 }
 
 export def gl [
     commit?: string@"nu-complete git log"
-    --verbose(-v):bool
+    --verbose(-v)
     --num(-n):int=32
 ] {
     if ($commit|is-empty) {

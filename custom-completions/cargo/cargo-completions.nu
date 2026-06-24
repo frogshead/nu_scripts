@@ -30,7 +30,7 @@ def "nu-complete cargo features" [] {
 # `cargo --list` is slow, `open` is faster.
 # TODO: Add caching.
 def "nu-complete cargo subcommands" [] {
-  ^cargo --list | lines | skip 1 | str join "\n" | from ssv --noheaders | get column1
+  ^cargo --list | lines | skip 1 | str join "\n" | from ssv --noheaders | get column0
 }
 def "nu-complete cargo vcs" [] {
   [
@@ -167,7 +167,7 @@ export extern "cargo clean" [
 # Build a package's documentation
 export extern "cargo doc" [
   --open                    # Open the docs in a browser after building them
-  --no-deps                 # Do not build documentation for dependencie
+  --no-deps                 # Do not build documentation for dependency
   --document-private-items  # Include non-public items in the documentation
   --package(-p): string@"nu-complete cargo packages" # Document only the specified packages
   --workspace               # Document all members in the workspace
@@ -307,7 +307,7 @@ export extern "cargo test" [
 
 # Execute benchmarks of a package
 export extern "cargo bench" [
-  bench_option_seperator?: string
+  bench_option_separator?: string
   ...options: any # Options to be passed to the benchmarks
   --no-run # Compile, but don't run benchmarks
   --no-fail-fast # Run all benchmarks regardless of failure
@@ -497,10 +497,10 @@ export extern "cargo clippy" [
   --fix          # Automatically apply lint suggestions. This flag implies `--no-deps
   --version(-V)  # Prints version information
   --help(-h)     # Prints help information
-  --warn(-W)     # Set lint warnings
-  --allow(-A)    # Set lint allowed
-  --deny(-D)     # Set lint denied
-  --forbid(-F)   # Set lint forbidden
+  --warn(-W): string     # Set lint warnings
+  --allow(-A): string    # Set lint allowed
+  --deny(-D): string     # Set lint denied
+  --forbid(-F): string   # Set lint forbidden
   --package(-p): string@"nu-complete cargo packages" #Check only the specified packages
   --workspace # Check all members in the workspace
   --all # Alias for --workspace (deprecated)
@@ -584,3 +584,11 @@ export extern "cargo add" [
   --target                # Add as dependency to the given target platform
   ...args
 ]
+
+# Cargo aliases
+export alias "cargo b"  = cargo build
+export alias "cargo c"  = cargo check
+export alias "cargo d"  = cargo doc
+export alias "cargo r"  = cargo run
+export alias "cargo rm" = cargo remove
+export alias "cargo t"  = cargo test

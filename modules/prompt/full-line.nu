@@ -1,15 +1,15 @@
-# Build a full-line prompt with widgets for: 
+# Build a full-line prompt with widgets for:
 #   activated python virtual environment (from `overlay use <ve>/bin/activate.nu`)
 #   current working directory
-#   git status (branch, branch ahead/behind remote, files changed) 
+#   git status (branch, branch ahead/behind remote, files changed)
 #   current position in remembered working directories (`std dirs`, a.k.a. `shells`)
 #   also, as a nu dev special, widget for active nu executable (flags `cargo run` vs "installed" and which branch built from).
-# 
+#
 # to use:
 # 1. copy this file to `($nu.default-config-dir | path add 'scripts')` (Or someplace on your $env.NU_LIB_DIRS path, defined in env.nu)
-# 2. cut `$env.PROMPT_COMMAND` and `PROMPT_OMMAND_RIGHT' from your env.nu.  
+# 2. cut `$env.PROMPT_COMMAND` and `PROMPT_OMMAND_RIGHT' from your env.nu.
 #    These will depend on `use full-line`, which can not be done in env.nu.
-#    You can leave the `PROMPT-*INDICATOR*` statements in env.nu or 
+#    You can leave the `PROMPT-*INDICATOR*` statements in env.nu or
 #    consolidate all prompt stuff in config.nu.
 # 3. Add new prompt setup stuff somewhere in config.nu:
 #   ```
@@ -18,7 +18,7 @@
 #   $env.PROMPT_COMMAND_RIGHT = ""
 #   ```
 #
-# credit panache-git for the git status widget.  
+# credit panache-git for the git status widget.
 
 use std dirs
 use std assert
@@ -37,29 +37,28 @@ export def main [
         if 'VIRTUAL_ENV_PROMPT' in $env {'(' + $env.VIRTUAL_ENV_PROMPT + ') '}
         )($pad_char + $pad_char + $pad_char)(current_exe)")
     let left_content_len = ($left_content | ansi strip | str length -g)
+
     let mid_content = ($" (dir_string) ")
     let mid_content_len = ($mid_content | ansi strip | str length -g)
-    
-    let term_width = ((term size) | get columns)
-    let left_padding = ((($term_width / 2) - ($mid_content_len / 2)) | into int)
 
-    let dirs_segment = $" |(dirs show | each {|it| if $it.active {'V'} else {'.'}} | str join '')|"
+    let dirs_segment = $" |(dirs | each {|it| if $it.active {'V'} else {'.'}} | str join '')|"
     let right_content = ($"(repo-styled)($pad_char + $pad_char + $pad_char)($dirs_segment)")
     let right_content_len = ($right_content | ansi strip | str length -g)
 
-    let right_padding = (($term_width - $left_padding - $mid_content_len) | into int)
-    
+    let term_width = ((term size) | get columns)
+    let mid_padding = ($term_width - $left_content_len - $right_content_len)
+
     [(ansi reset),
-        ($left_content | fill --character $pad_char --width $left_padding --alignment left),
-        $mid_content,
-        ($right_content | fill --character $pad_char --width $right_padding --alignment right),
+        $left_content,
+        ($mid_content | fill --character $pad_char --width  $mid_padding --alignment center),
+        $right_content,
         "\n"
     ] | str join ''
 }
 
 # build current exe widget
 def current_exe [] {
-    let content = ([ 
+    let content = ([
             ($nu.current-exe | path dirname | path basename | str replace "bin" ""),
             (version | get branch | str replace "main" ""),
         ] | str join " " | str trim)
@@ -71,33 +70,20 @@ def current_exe [] {
 }
 
 # build current working directory segment
+## don't get sucked into the path syntax wars: simply color portions of path to flag privileged vs normal user mode.
 def dir_string [] {
-
-    mut home = ""
-    try {
-        if $nu.os-info.name == "windows" {
-            $home = $env.USERPROFILE
-        } else {
-            $home = $env.HOME
-        }
-    }
-
-    let dir = ([
-        ($env.PWD | str substring 0..($home | str length) | str replace $home "~"),
-        ($env.PWD | str substring ($home | str length)..)
-    ] | str join)
 
     let path_color = (if (is-admin) { ansi red_bold } else { ansi green_bold })
     let separator_color = (if (is-admin) { ansi light_red_bold } else { ansi light_green_bold })
-    $"($path_color)($dir)(ansi reset)" | str replace --all (char path_sep) $"($separator_color)/($path_color)"
+    $"($path_color)($env.PWD)(ansi reset)" | str replace --all (char path_sep) $"($separator_color)(char path_sep)($path_color)"
 }
 
-# Following code cheerfully ~~stolen~~ adapted from: 
+# Following code cheerfully ~~stolen~~ adapted from:
 # https://github.com/nushell/nu_scripts/blob/ab0d3aaad015ca8ac2c2004d728cc8bac32cda1b/modules/prompt/panache-git.nu
 
 # Get repository status as structured data
 def repo-structured [] {
-  let in_git_repo = (do --ignore-errors { git rev-parse --abbrev-ref HEAD } | is-empty | nope)
+  let in_git_repo = ((git rev-parse HEAD err> /dev/null | complete | get exit_code) == 0)
 
   let status = (if $in_git_repo {
     git --no-optional-locks status --porcelain=2 --branch | lines

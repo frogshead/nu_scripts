@@ -9,7 +9,7 @@
 # 2. if the interval has not expired yet, it prints the Cached information
 # 3. if the interval has expired, it runs the weather command again and caches the info
 
-# this script is depenedent on get-weather
+# this script is dependent on get-weather
 source get-weather.nu
 
 #command to run at interval
@@ -18,10 +18,7 @@ def timed_weather_run [
     --interval(-i): duration # The interval duration
     ] {
 
-    # get the type of system we're on
-    let system_name = ((sys).host | get name)
-
-    if $system_name == "Windows" {
+    if $nu.os-info.name == "windows" {
         # $"The system is Windows(char nl)"
         # generate temp file name
         let weather_runtime_file = (($env.TMP) | path join weather_runtime_file.json)

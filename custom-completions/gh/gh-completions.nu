@@ -2,7 +2,7 @@
 def "nu-complete gh" [] {
     ^gh --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -16,7 +16,7 @@ export extern "gh" [
 def "nu-complete gh auth" [] {
     ^gh auth --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -43,7 +43,7 @@ export extern "gh browse" [
 def "nu-complete gh codespace" [] {
     ^gh codespace --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -57,7 +57,7 @@ export extern "gh codespace" [
 def "nu-complete gh gist" [] {
     ^gh gist --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -68,10 +68,68 @@ export extern "gh gist" [
     --help             # Show help for command
 ]
 
+export extern "gh gist clone" [
+    gist: string        # gist to clone
+    directory?:path     # directory to clone
+    --help             # Show help for command
+]
+
+export extern "gh gist create" [
+    filename_or_stdin: string        # gist to create
+    --desc(-d): string               # A description for this gist
+    --filename(-f): string           # Provide a filename to be used when reading from standard input
+    --public(-p)                     # List the gist publicly (default: secret)
+    --web(-w)                        # Open the web browser with created gist
+    --public                         # Make the new gist public
+    --help                           # Show help for command
+]
+
+export extern "gh gist delete" [
+    gist: string@"nu-complete gist list"        # gist to delete
+    --help                           # Show help for command
+]
+
+export extern "gh gist edit" [
+    gist?: string@"nu-complete gist list"        # gist to edit
+    --add(-a): string                # Add a new file to the gist
+    --desc(-d): string               # New description for the gist
+    --filename(-f): string           # Select a file to edit
+    --remove(-r): string             # Remove a file from the gist
+    --help                           # Show help for command
+]
+
+def "nu-complete gist list" [] {
+    # TODO add the name of the gist to autocompletion
+    ^gh gist list --limit 100 | lines | str replace --regex --multiline '\S+\K.*' ''
+}
+
+export extern "gh gist list" [
+    --limit(-L): number     # Maximum number of repositories to list (default 30)
+    --public                         # Show only the public gists
+    --secret                         # Show only the secret gists
+    --help                           # Show help for command
+]
+
+export extern "gh gist rename" [
+    gist: string                   # gist to rename
+    oldFilename: string            # gist to rename
+    newFilename: string            # gist to rename
+    --help                           # Show help for command
+]
+
+export extern "gh gist view" [
+    gist?: string             # gist to view
+    --filename(-f): string    # Display a single file from the gist
+    --files                   # List file names from the gist
+    --raw(-r)                 # Print raw instead of rendered gist contents
+    --web(-w)                 # Open gist in the browser
+    --help                           # Show help for command
+]
+
 def "nu-complete gh issue" [] {
     ^gh issue --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -86,7 +144,7 @@ export extern "gh issue" [
 def "nu-complete gh org" [] {
     ^gh org --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -98,7 +156,7 @@ export extern "gh org" [
 ]
 
 def "nu-complete gh pr" [] {
-    ^gh pr --help | lines | filter { str starts-with "  " } | skip 1 | parse "{value}: {description}" | str trim
+    ^gh pr --help | lines | where { str starts-with "  " } | skip 1 | parse "{value}: {description}" | str trim
 }
 
 export extern "gh pr" [
@@ -124,7 +182,7 @@ export extern "gh pr checkout" [
 def "nu-complete gh project" [] {
     ^gh project --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -138,7 +196,7 @@ export extern "gh project" [
 def "nu-complete gh release" [] {
     ^gh release --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -153,7 +211,7 @@ export extern "gh release" [
 def "nu-complete gh repo" [] {
     ^gh repo --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -175,6 +233,36 @@ export extern "gh repo clone" [
     --help             # Show help for command
 ]
 
+def "nu-complete visibility" [] {
+    ['public', 'private', 'internal']
+}
+
+export extern "gh repo list" [
+    owner?: string          # List repos of this owner
+    --archived              # Show only archived repositories
+    --fork                  # Show only forks
+    --jq(-q):string         # Filter JSON output using a jq expression
+    --json: string          # Output JSON with the specified fields
+    --language(-l): string  # Filter by primary coding language
+    --limit(-L): number     # Maximum number of repositories to list (default 30)
+    --no-archived           # Omit archived repositories
+    --source                # Show only non-forks
+    --template(-t): string  # Format JSON output using a Go template; see "gh help formatting"
+    --topic: string         # Filter by topic
+    --visibility: string@"nu-complete visibility"   # Filter by repository visibility: {public|private|internal}
+    --help                  # Show help for command
+]
+
+export extern "gh repo view" [
+    org_repo: string       # <ORG/REPO> to view
+    --branch(-b):string    # View a specific branch of the repository
+    --jq(-q):string        # Filter JSON output using a jq expression
+    --json: string         # Output JSON with the specified fields
+    --template(-t):string  # Format JSON output using a Go template; see "gh help formatting"
+    --web                  # Open a repository in the browser
+    --help                  # Show help for command
+]
+
 def "nu-complete gitignore list" [] {
     ^gh api  -H "Accept: application/vnd.github+json"  /gitignore/templates
     | from json
@@ -187,7 +275,7 @@ def "nu-complete licenses list" [] {
 }
 
 export extern "gh repo create" [
-    repo_name: string
+    repo_name?: string
     --help                     # Show help for command
     --add-readme               # Add a README file to the new repository
     --clone(-c)                # Clone the new repository to the current directory
@@ -209,7 +297,7 @@ export extern "gh repo create" [
 ]
 
 export extern "gh repo fork" [
-    repo: string
+    repo?: string
     --clone                # Clone the fork
     --default-branch-only  # Only include the default branch in the fork
     --fork-name: string    # Rename the forked repository
@@ -222,7 +310,7 @@ export extern "gh repo fork" [
 def "nu-complete gh cache" [] {
     ^gh cache --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -237,7 +325,7 @@ export extern "gh cache" [
 def "nu-complete gh run" [] {
     ^gh run --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -251,7 +339,7 @@ export extern "gh run" [
 def "nu-complete gh workflow" [] {
     ^gh workflow --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -266,7 +354,7 @@ export extern "gh workflow" [
 def "nu-complete gh alias" [] {
     ^gh alias --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -315,7 +403,7 @@ export extern "gh completion" [
 def "nu-complete gh config" [] {
     ^gh config --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -329,7 +417,7 @@ export extern "gh config" [
 def "nu-complete gh extension" [] {
     ^gh extension --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -343,7 +431,7 @@ export extern "gh extension" [
 def "nu-complete gh gpg-key" [] {
     ^gh gpg-key --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -357,7 +445,7 @@ export extern "gh gpg-key" [
 def "nu-complete gh label" [] {
     ^gh label --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -372,7 +460,7 @@ export extern "gh label" [
 def "nu-complete gh ruleset" [] {
     ^gh ruleset --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -387,7 +475,7 @@ export extern "gh ruleset" [
 def "nu-complete gh search" [] {
     ^gh search --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -413,7 +501,7 @@ export extern "gh search" [
 def "nu-complete gh secret" [] {
     ^gh secret --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -428,7 +516,7 @@ export extern "gh secret" [
 def "nu-complete gh ssh-key" [] {
     ^gh ssh-key --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -448,7 +536,7 @@ export extern "gh status" [
 def "nu-complete gh variable" [] {
     ^gh variable --help 
     | lines 
-    | filter { str starts-with "  " } 
+    | where { str starts-with "  " } 
     | skip 1 
     | parse "{value}: {description}" 
     | str trim
@@ -459,3 +547,58 @@ export extern "gh variable" [
     --repo(-R)      # Select another repository using the [HOST/]OWNER/REPO format
     --help          # Show help for command
 ]
+
+export def "gh pr view inlined-comments" [
+    pr?: int
+    repo?: string  # e.g. nushell/nu_scripts
+] {
+# nushell/nu_scripts/pull/1105
+    let pr = if ($pr == null) { ^gh pr view --json number | from json | get number } else { $pr }
+    let repo = if ($repo == null) {
+        ^gh repo view --json name,owner | from json | select owner.login name | rename owner name
+    } else {
+        $repo | parse '{owner}/{name}' | get 0
+    }
+
+    ( (gh api
+          -H "Accept: application/vnd.github+json"
+          -H "X-GitHub-Api-Version: 2022-11-28"
+          $"/repos/($repo.owner.)/($repo.name)/pulls/($pr)/comments")
+      | from json
+      | select user.login body diff_hunk
+      | rename user comment diff )
+}
+
+def "gh get stars" [
+    end_cursor: string = ""  # endCursor from a previous query
+    --first: int = 100  # returns the first n elements from the list
+] {
+    # https://docs.github.com/en/graphql/reference/objects#user
+    ^gh api graphql -F $'first=($first)' -F $'endCursor=($end_cursor)' -f query='
+      query($first: Int, $endCursor: String!){
+        viewer {
+          starredRepositories(first: $first, after: $endCursor, orderBy: {field: STARRED_AT, direction: DESC}) {
+            edges { node { url description } starredAt }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }
+    '
+    | from json | select data.viewer.starredRepositories.edges data.viewer.starredRepositories.pageInfo
+    | rename stars pageInfo
+}
+
+export def "gh my stars" [] {
+    mut stars = []
+    mut end_cursor = ""
+    loop {
+        let $part = gh get stars $end_cursor
+        $stars = $stars | append $part.stars
+        if $part.pageInfo?.hasNextPage? == true {
+            $end_cursor = $part.pageInfo.endCursor
+        } else {
+            break
+        }
+    }
+    $stars | flatten | update cells --columns [starredAt] { $in | into datetime } | sort-by starredAt
+}
