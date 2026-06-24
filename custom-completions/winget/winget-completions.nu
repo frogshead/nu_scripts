@@ -93,33 +93,33 @@ def "nu-complete winget parse table" [lines: any] {
         available: ($header.available | str length),
         source: ($header.source | str length)
     }
-    $lines | skip 2 | each { |it|
-        let it = ($it | split chars)
+    $lines | skip 2 | each { |line|
+        let line = ($line | split chars)
 
         let version = if $lengths.version > 0 {
             (
-                $it | skip ($lengths.name + $lengths.id)
+                $line | skip ($lengths.name + $lengths.id)
                 | first $lengths.version | str join | str trim
             )
         } else { "" }
 
         let available = if $lengths.available > 0 {
             (
-                $it | skip ($lengths.name + $lengths.id + $lengths.version)
+                $line | skip ($lengths.name + $lengths.id + $lengths.version)
                 | first $lengths.available | str join | str trim
             )
         } else { "" }
 
         let source = if $lengths.source > 0 {
             (
-                $it | skip ($lengths.name + $lengths.id + $lengths.version + $lengths.available)
+                $line | skip ($lengths.name + $lengths.id + $lengths.version + $lengths.available)
                 | str join | str trim
             )
         } else { "" }
 
         {
-            name: ($it | first $lengths.name | str join | str trim),
-            id: ($it | skip $lengths.name | first $lengths.id | str join | str trim),
+            name: ($line | first $lengths.name | str join | str trim),
+            id: ($line | skip $lengths.name | first $lengths.id | str join | str trim),
             version: $version,
             available: $available,
             source: $source
@@ -219,7 +219,7 @@ def "winget show" [
         } else {
             let header = ($output | first | parse -r 'Found (?P<Name>.+) \[(?P<Id>.+)\]')
             let manifest = ($output | skip 1 | str join (char newline) | from yaml)
-            $header | first | merge {|| $manifest }
+            $header | first | merge $manifest
         }
     }
 }
