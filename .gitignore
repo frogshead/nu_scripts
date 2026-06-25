@@ -2,3 +2,9 @@
 
 # ignore the git mailmap file
 .mailmap
+
+# nu-specific
+check-files.nu
+gamestate.nuon
+
+.vscode/

@@ -6,6 +6,7 @@
   - [background\_task](#background_task)
   - [base16](#base16)
   - [coloring](#coloring)
+  - [crypto](#crypto)
   - [data\_extraction](#data_extraction)
   - [docker](#docker)
   - [filesystem](#filesystem)
@@ -13,6 +14,7 @@
   - [fun](#fun)
   - [github](#github)
   - [gitlab](#gitlab)
+  - [jc](#jc)
   - [kubernetes](#kubernetes)
   - [make\_release](#make_release)
   - [maths](#maths)
@@ -65,7 +67,7 @@ An extensive example of a wrapper for docker operations, with nushell completion
 
 - [bm](./filesystem/bm.nu) - A Simple bookmarking module. It uses `XGD_DATA_HOME` to save bookmarks.
 - [expand](./filesystem/expand.nu) - expansion module that implements bashes brace expansion. 
-The expansion uses a list inside of braces seperated by `,` to expand into a list of multiple string variations like:
+The expansion uses a list inside of braces separated by `,` to expand into a list of multiple string variations like:
 ```
  expand a/{b,c}/d{e,f,g}.nu{,on}
 ```
@@ -116,9 +118,86 @@ Examples of input/output formatters:
 ## [gitlab](../sourced/gitlab/)
 Search files on your GitLab server
 
+## [jc](./jc/)
+
+Converts the output of many common external commands into nushell data structures.
+
+Example:
+```nushell
+: jc ping -4 -c 2 google.com
+╭──────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────╮
+│ destination_ip       │ 216.58.209.46                                                                            │
+│ data_bytes           │ 56                                                                                       │
+│ pattern              │                                                                                          │
+│ destination          │ google.com                                                                               │
+│ duplicates           │ 0                                                                                        │
+│ packets_transmitted  │ 2                                                                                        │
+│ packets_received     │ 2                                                                                        │
+│ packet_loss_percent  │ 0.00                                                                                     │
+│ time_ms              │ 1001.00                                                                                  │
+│ round_trip_ms_min    │ 3.87                                                                                     │
+│ round_trip_ms_avg    │ 4.04                                                                                     │
+│ round_trip_ms_max    │ 4.21                                                                                     │
+│ round_trip_ms_stddev │ 0.17                                                                                     │
+│                      │ ╭───┬───────┬───────────┬───────┬───────────────┬──────────┬─────┬─────────┬───────────╮ │
+│ responses            │ │ # │ type  │ timestamp │ bytes │  response_ip  │ icmp_seq │ ttl │ time_ms │ duplicate │ │
+│                      │ ├───┼───────┼───────────┼───────┼───────────────┼──────────┼─────┼─────────┼───────────┤ │
+│                      │ │ 0 │ reply │           │    64 │ 216.58.209.46 │        1 │ 120 │    4.21 │ false     │ │
+│                      │ │ 1 │ reply │           │    64 │ 216.58.209.46 │        2 │ 120 │    3.87 │ false     │ │
+│                      │ ╰───┴───────┴───────────┴───────┴───────────────┴──────────┴─────┴─────────┴───────────╯ │
+╰──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────╯
+```
+```nushell
+: (jc ping -4 -c 2 google.com).round_trip_ms_avg
+6.054
+```
+For supported commands see [JC parsers documentation](https://kellyjonbrazil.github.io/jc/#parsers)
+
+Installation:
+
+  1. Install the `jc` command line: https://kellyjonbrazil.github.io/jc/#installation
+  2. Import this module in your `config.nu`: `import ~/.local/share/nu_scripts/modules/jc/`
+
 ## [kubernetes](./kubernetes/)
-???
- 
+
+| Category | Command | Description | Options |
+|----------|---------|-------------|----------|
+| File Operations | `kaf <file>` | kubectl apply -f | |
+| | `kdf <file>` | kubectl diff -f | |
+| | `kdelf <file>` | kubectl delete -f | |
+| | `kak <file>` | kubectl apply -k (kustomize) | |
+| | `kdk <file>` | kubectl diff -k (kustomize) | |
+| | `kdelk <file>` | kubectl delete -k (kustomize) | |
+| | `kk <file>` | kubectl kustomize (template) | |
+| Context & Namespace | `kcc <context>` | change context | |
+| | `kn <namespace>` | change namespace | |
+| | `kccc <name>` | clone context to ~/.kube/config.d/ | |
+| Resource Management | `kg <kind> [resource]` | get resources | `-n/--namespace`: specify namespace<br>`-p/--jsonpath`: use jsonpath<br>`-l/--selector`: label selector<br>`-v/--verbose`: detailed output<br>`-w/--watch`: watch resources<br>`-W/--wide`: wide output<br>`-a/--all`: all namespaces |
+| | `kd <kind> <resource>` | describe resource | |
+| | `kc <kind> <name>` | create resource | |
+| | `ky <kind> <resource>` | get yaml output | |
+| | `ke <kind> [resource]` | edit resource | |
+| | `kdel <kind> <resource>` | delete resource | |
+| Pods | `kgp` | get pods | |
+| | `kdp <pod>` | describe pod | |
+| | `kdelp <pod>` | delete pod | |
+| | `kep <pod>` | edit pod | |
+| | `kl <pod>` | logs from pod | `-n/--namespace`: specify namespace<br>`-c/--container`: specify container<br>`-f/--follow`: follow logs<br>`-p/--previous`: show previous logs |
+| | `kep <pod>` | exec into pod | |
+| Services | `kgs` | get services | |
+| | `kds <svc>` | describe service | |
+| | `kdels <svc>` | delete service | |
+| | `kes <svc>` | edit service | |
+| Deployments | `kgd` | get deployments | |
+| | `kdel deployment <deploy>` | delete deployment | |
+| | `ked <deploy>` | edit deployment | |
+| | `ksd <deploy> <num>` | scale deployment | |
+| | `ksdr <deploy> <num>` | scale deployment with reset | |
+| | `krhd <deploy>` | rollout history deployment | |
+| | `krud <deploy>` | rollout undo deployment | |
+| Config & Utils | `kube-config` | get kubeconfig info | |
+| | `kube-refine [namespace] -k [kind]` | extract structured info from resources | |
+
 ## [make_release](../make_release/)
 ???
 
@@ -187,3 +266,10 @@ These scripts should be used to demonstrate how get your local weather and/or we
 
 ## [webscraping](../sourced/webscraping/)
 Simple scripts to demonstrate how to scrape websites in nushell. Requires `query web` plugin
+
+## [result](./result/)
+A module to include in the config which enables storing and convenient access of previously output
+results.
+
+## [crypto](./crypto/)
+Tools for cryptography

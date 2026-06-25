@@ -2,7 +2,7 @@
 export def --env activate [
     env_name?: string@'nu-complete conda envs' # name of the environment
 ] {
-    let conda_info = (conda info --envs --json | from json)
+    let conda_info = (conda info --json | from json)
 
     let env_name = if $env_name == null {
         "base"
@@ -101,7 +101,7 @@ def check-if-env-exists [ env_name: string, conda_info: record ] {
 
     let en = ($env_dirs | each {|en| $conda_info.envs | where $it == $en } | where ($it | length) == 1 | flatten)
     if ($en | length) > 1 {
-        error make --unspanned {msg: $"You have enviroments in multiple locations: ($en)"}
+        error make --unspanned {msg: $"You have environments in multiple locations: ($en)"}
     }
     if ($en | length) == 0 {
         error make --unspanned {msg: $"Could not find given environment: ($env_name)"}
@@ -139,7 +139,7 @@ def conda-create-path-unix [env_dir: path] {
         ([$env_dir "bin"] | path join)
     ]
 
-    let new_path = ([$env_path $env.PATH]
+    let new_path = ([$env_path (system-path)]
         | flatten
         | str join (char esep))
 
@@ -147,11 +147,11 @@ def conda-create-path-unix [env_dir: path] {
 }
 
 def windows? [] {
-    ((sys).host.name | str downcase) == "windows"
+    ($nu.os-info.name | str downcase) == "windows"
 }
 
 def system-path [] {
-    if "PATH" in $env { $env.PATH } else { $env.Path }
+    if "PATH" in $env { $env.PATH } else { $env.Path } | path expand -n
 }
 
 def has-env [name: string] {

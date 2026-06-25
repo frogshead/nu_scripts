@@ -6,16 +6,24 @@
 
 # list of supported architecture
 def scoopArches [] {
-  [ "32bit", "64bit" ]
+  ["32bit" "64bit"]
 }
 
 # list of all installed apps
 def scoopInstalledApps [] {
-  let localAppDir = if ('SCOOP' in $env) { [$env.SCOOP, 'apps'] | path join } else { [$env.USERPROFILE, 'scoop', 'apps'] | path join }
-  let localApps   = (ls $localAppDir | get name | path basename)
+  let localAppDir = if ('SCOOP' in $env) {
+    [$env.SCOOP 'apps'] | path join
+  } else {
+    [$env.USERPROFILE 'scoop' 'apps'] | path join
+  }
+  let localApps = (ls $localAppDir | get name | path basename)
 
-  let globalAppDir = if ('SCOOP_GLOBAL' in $env) { [$env.SCOOP_GLOBAL), 'apps'] | path join } else { [$env.ProgramData, 'scoop', 'apps'] | path join }
-  let globalApps   = if ($globalAppDir | path exists) { ls $globalAppDir | get name | path basename }
+  let globalAppDir = if ('SCOOP_GLOBAL' in $env) {
+    [$env.SCOOP_GLOBAL 'apps'] | path join
+  } else {
+    [$env.ProgramData 'scoop' 'apps'] | path join
+  }
+  let globalApps = if ($globalAppDir | path exists) { ls $globalAppDir | get name | path basename }
 
   $localApps | append $globalApps
 }
@@ -27,72 +35,121 @@ def scoopInstalledAppsWithStar [] {
 
 # list of all manifests from all buckets
 def scoopAllApps [] {
-  let bucketsDir = if ('SCOOP' in $env) { [ $env.SCOOP, 'buckets' ] | path join } else { [ $env.USERPROFILE, 'scoop', 'buckets' ] | path join }
-  (ls -s $bucketsDir | get name) | each {|bucket| ls ([$bucketsDir, $bucket, 'bucket', '*.json'] | path join ) | get name | path basename | str substring ..-5} | flatten | uniq
+  let bucketsDir = if ('SCOOP' in $env) {
+    [$env.SCOOP 'buckets'] | path join
+  } else {
+    [$env.USERPROFILE 'scoop' 'buckets'] | path join
+  }
+  (ls -s $bucketsDir | get name) | each {|bucket| ls ([$bucketsDir $bucket 'bucket'] | path join) | get name | path parse | where extension == json | get stem } | flatten | uniq
 }
 
 # list of all apps that are not installed
 def scoopAvailableApps [] {
-  let all       = (scoopAllApps)
+  let all = (scoopAllApps)
   let installed = (scoopInstalledApps)
 
-  $all | where not $it in $installed
+  $all | where $it not-in $installed
 }
 
 # list of all config options
 def scoopConfigs [] {
   [
-    '7ZIPEXTRACT_USE_EXTERNAL',
-    'MSIEXTRACT_USE_LESSMSI',
-    'NO_JUNCTIONS',
-    'SCOOP_REPO',
-    'SCOOP_BRANCH',
-    'proxy',
-    'default_architecture',
-    'debug',
-    'force_update',
-    'show_update_log',
-    'manifest_review',
-    'shim',
-    'rootPath',
-    'globalPath',
-    'cachePath',
-    'gh_token',
-    'virustotal_api_key',
-    'cat_style',
-    'ignore_running_processes',
-    'private_hosts',
-    'aria2-enabled',
-    'aria2-warning-enabled',
-    'aria2-retry-wait',
-    'aria2-split',
-    'aria2-max-connection-per-server',
-    'aria2-min-split-size',
-    'aria2-options',
+    'use_external_7zip'
+    'use_lessmsi'
+    'use_sqlite_cache'
+    'no_junction'
+    'scoop_repo'
+    'scoop_branch'
+    'proxy'
+    'autostash_on_conflict'
+    'default_architecture'
+    'debug'
+    'force_update'
+    'show_update_log'
+    'show_manifest'
+    'shim'
+    'root_path'
+    'global_path'
+    'cache_path'
+    'gh_token'
+    'virustotal_api_key'
+    'cat_style'
+    'ignore_running_processes'
+    'private_hosts'
+    'hold_update_until'
+    'update_nightly'
+    'use_isolated_path'
+    'aria2-enabled'
+    'aria2-warning-enabled'
+    'aria2-retry-wait'
+    'aria2-split'
+    'aria2-max-connection-per-server'
+    'aria2-min-split-size'
+    'aria2-options'
   ]
 }
 
 # boolean as strings
 def scoopBooleans [] {
-  ["'true'", "'false'"]
+  ["'true'" "'false'" ' ']
 }
 
 def scoopRepos [] {
   [
-    'https://github.com/ScoopInstaller/Scoop',
+    'https://github.com/ScoopInstaller/Scoop'
   ]
 }
 
 def scoopBranches [] {
-  ['master', 'develop']
+  ['master' 'develop']
 }
 
 def scoopShimBuilds [] {
-  [ 'kiennq', 'scoopcs', '71']
+  ['kiennq' 'scoopcs' '71']
+}
+
+def scoopCommands [] {
+  let libexecDir = if ('SCOOP' in $env) {
+    [$env.SCOOP 'apps' 'scoop' 'current' 'libexec'] | path join
+  } else {
+    [$env.USERPROFILE 'scoop' 'apps' 'scoop' 'current' 'libexec'] | path join
+  }
+
+  let commands = (
+    ls $libexecDir
+    | each {|command|
+      [
+        [value description];
+        [
+          # eg. scoop-help.ps1 -> help
+          ($command.name | path parse | get stem | str substring 6..)
+          # second line is starts with '# Summary: '
+          # eg. '# Summary: Install apps' -> 'Install apps'
+          (open $command.name | lines | skip 1 | first | str substring 11..)
+        ]
+      ]
+    }
+    | flatten
+  )
+  $commands
+}
+
+def scoopAliases [] {
+  scoop alias list | str trim | lines | slice 2.. | split column " " | get column1
 }
 
 def batStyles [] {
-  [ 'default', 'auto', 'full', 'plain', 'changes', 'header', 'header-filename', 'header-filesize', 'grid', 'rule', 'numbers', 'snip' ]
+  ['default' 'auto' 'full' 'plain' 'changes' 'header' 'header-filename' 'header-filesize' 'grid' 'rule' 'numbers' 'snip']
+}
+
+def scoopShims [] {
+  let localShimDir = if ('SCOOP' in $env) { [$env.SCOOP 'shims'] | path join } else if (scoop config root_path | path exists) { scoop config root_path } else { [$env.USERPROFILE 'scoop' 'shims'] | path join }
+  let localShims = if ($localShimDir | path exists) { ls $localShimDir | get name | path parse | select stem extension | where extension == shim | get stem } else { [] }
+
+  let globalShimDir = if ('SCOOP_GLOBAL' in $env) { [$env.SCOOP_GLOBAL 'shims'] | path join } else if (scoop config global_path | path exists) { scoop config global_path } else { [$env.ProgramData 'scoop' 'shims'] | path join }
+  let globalShims = if ($globalShimDir | path exists) { ls $globalShimDir | get name | path parse | select stem extension | where extension == shim | get stem } else { [] }
+
+  $localShims | append $globalShims | uniq | sort
 }
 
 ################################################################
@@ -101,30 +158,35 @@ def batStyles [] {
 
 # Windows command line installer
 export extern "scoop" [
-  --help(-h)    # Show help for this command.
-  --version(-v) # Show current scoop and added buckets versions
+  alias?: string@scoopCommands # available scoop commands and aliases
+  --help (-h) # Show help for this command.
+  --version (-v) # Show current scoop and added buckets versions
 ]
 
 ################################################################
 # scoop list
 ################################################################
-
-# Lists all installed apps, or the apps matching the supplied query.
-export extern "scoop list" [
-  query?: string@scoopInstalledApps # string that will be matched
-  --help(-h) # Show help for this command.
-]
-
+export def "scoop list" [
+  query?: string@scoopInstalledApps
+] {
+  let result = (^scoop list ($query | default "") | complete)
+  if $result.exit_code == 0 {
+    ($result.stdout | decode utf-8)
+    | lines
+    | skip 4
+    | parse -r '(?P<name>\S+)\s+(?P<version>\S+)\s+(?P<source>\S+)\s+(?P<updated>\S+\s+\S+)\s+(?P<info>\S+)?'
+  }
+}
 ################################################################
 # scoop uninstall
 ################################################################
 
 # Uninstall specified application(s).
 export extern "scoop uninstall" [
-  ...app: string@scoopInstalledApps # app that will be uninstalled
-  --help(-h)   # Show help for this command.
-  --global(-g) # Uninstall a globally installed application(s).
-  --purge(-p)  # Persisted data will be removed. Normally when application is being uninstalled, the data defined in persist property/manually persisted are kept.
+  app?: string@scoopInstalledApps # app that will be uninstalled
+  --help (-h) # Show help for this command.
+  --global (-g) # Uninstall a globally installed application(s).
+  --purge (-p) # Persisted data will be removed. Normally when application is being uninstalled, the data defined in persist property/manually persisted are kept.
 ]
 
 ################################################################
@@ -133,11 +195,11 @@ export extern "scoop uninstall" [
 
 # Perform cleanup on specified installed application(s) by removing old/not actively used versions.
 export extern "scoop cleanup" [
-  ...app: string@scoopInstalledAppsWithStar # app that will be cleaned
-  --help(-h)   # Show help for this command.
-  --all(-a)    # Cleanup all apps (alternative to '*')
-  --global(-g) # Perform cleanup on globally installed application(s). (Include them if '*' is used)
-  --cache(-k)  # Remove outdated download cache. This will keep only the latest version cached.
+  app?: string@scoopInstalledAppsWithStar # app that will be cleaned
+  --help (-h) # Show help for this command.
+  --all (-a) # Cleanup all apps (alternative to '*')
+  --global (-g) # Perform cleanup on globally installed application(s). (Include them if '*' is used)
+  --cache (-k) # Remove outdated download cache. This will keep only the latest version cached.
 ]
 
 ################################################################
@@ -146,9 +208,9 @@ export extern "scoop cleanup" [
 
 # Display information about an application.
 export extern "scoop info" [
-  app: string@scoopAllApps # app that will be questioned
-  --verbose(-v) # Show full paths and URLs
-  --help(-h)    # Show help for this command.
+  app?: string@scoopAllApps # app that will be questioned
+  --verbose (-v) # Show full paths and URLs
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -157,15 +219,15 @@ export extern "scoop info" [
 
 # Update installed application(s), or scoop itself.
 export extern "scoop update" [
-  ...app: string@scoopInstalledAppsWithStar # which apps
-  --help(-h)        # Show help for this command.
-  --force(-f)       # Force update even when there is not a newer version.
-  --global(-g)      # Update a globally installed application(s).
-  --independent(-i) # Do not install dependencies automatically.
-  --no-cache(-k)    # Do not use the download cache.
-  --skip(-s)        # Skip hash validation (use with caution!).
-  --quiet(-q)       # Hide extraneous messages.
-  --all(-a)         # Update all apps (alternative to '*')
+  app?: string@scoopInstalledAppsWithStar # which apps
+  --help (-h) # Show help for this command.
+  --force (-f) # Force update even when there is not a newer version.
+  --global (-g) # Update a globally installed application(s).
+  --independent (-i) # Do not install dependencies automatically.
+  --no-cache (-k) # Do not use the download cache.
+  --skip (-s) # Skip hash validation (use with caution!).
+  --quiet (-q) # Hide extraneous messages.
+  --all (-a) # Update all apps (alternative to '*')
 ]
 
 ################################################################
@@ -174,14 +236,14 @@ export extern "scoop update" [
 
 # Install specific application(s).
 export extern "scoop install" [
-  ...app: string@scoopAvailableApps # which apps
-  --arch(-a): string@scoopArches # Use the specified architecture, if the application's manifest supports it.
-  --help(-h)                     # Show help for this command.
-  --global(-g)                   # Install the application(s) globally.
-  --independent(-i)              # Do not install dependencies automatically.
-  --no-cache(-k)                 # Do not use the download cache.
-  --skip(-s)                     # Skip hash validation (use with caution!).
-  --no-update-scoop(-u)          # Don't update Scoop before installing if it's outdated
+  app?: string@scoopAvailableApps # which apps
+  --arch (-a): string@scoopArches # Use the specified architecture, if the application's manifest supports it.
+  --help (-h) # Show help for this command.
+  --global (-g) # Install the application(s) globally.
+  --independent (-i) # Do not install dependencies automatically.
+  --no-cache (-k) # Do not use the download cache.
+  --skip (-s) # Skip hash validation (use with caution!).
+  --no-update-scoop (-u) # Don't update Scoop before installing if it's outdated
 ]
 
 ################################################################
@@ -190,8 +252,86 @@ export extern "scoop install" [
 
 # Show status and check for new app versions.
 export extern "scoop status" [
-  --help(-h)  # Show help for this command.
-  --local(-l) # Checks the status for only the locally installed apps, and disables remote fetching/checking for Scoop and buckets
+  --help (-h) # Show help for this command.
+  --local (-l) # Checks the status for only the locally installed apps, and disables remote fetching/checking for Scoop and buckets
+]
+
+################################################################
+# scoop help
+################################################################
+
+# Show help for scoop
+export extern "scoop help" [
+  --help (-h) # Show help for this command.
+
+  command?: string@scoopCommands # Show help for the specified command
+]
+
+################################################################
+# scoop alias
+################################################################
+
+# Add, remove or list Scoop aliases
+export extern "scoop alias" [
+  --help (-h) # Show help for this command.
+]
+
+# add an alias
+export extern "scoop alias add" [
+  name: string # name of the alias
+  command: string # scoop command
+  description?: string # description of the alias
+]
+
+# list all aliases
+export extern "scoop alias list" [
+  --verbose (-v) # Show alias description and table headers (works only for 'list')
+]
+
+# remove an alias
+export extern "scoop alias rm" [
+  name: string@scoopAliases # alias that will be removed
+]
+
+################################################################
+# scoop shim
+################################################################
+
+# Manipulate Scoop shims
+export extern "scoop shim" [
+  --help (-h) # Show help for this command.
+]
+
+# add a custom shim
+export extern "scoop shim add" [
+  shim_name: string # name of the shim
+  command_path: path # path to executable
+  cmd_args # additional command arguments
+  --global (-g) # Manipulate global shim(s)
+]
+
+# remove shims (CAUTION: this could remove shims added by an app manifest)
+export extern "scoop shim rm" [
+  shim_name: string@scoopShims # shim that will be removed
+  --global (-g) # Manipulate global shim(s)
+]
+
+# list all shims or matching shims
+export extern "scoop shim list" [
+  pattern?: string # list only matching shims
+  --global (-g) # Manipulate global shim(s)
+]
+
+# show a shim's information
+export extern "scoop shim info" [
+  shim_name: string@scoopShims # shim info to retrieve
+  --global (-g) # Manipulate global shim(s)
+]
+
+# alternate a shim's target source
+export extern "scoop shim alter" [
+  shim_name: string@scoopShims # shim that will be alternated
+  --global (-g) # Manipulate global shim(s)
 ]
 
 ################################################################
@@ -201,7 +341,7 @@ export extern "scoop status" [
 # Locate the path to a shim/executable that was installed with Scoop (similar to 'which' on Linux)
 export extern "scoop which" [
   command: string # executable name with .exe
-  --help(-h)      # Show help for this command.
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -210,8 +350,8 @@ export extern "scoop which" [
 
 # Show content of specified manifest.
 export extern "scoop cat" [
-  app: string@scoopAllApps # app that will be shown
-  --help(-h)               # Show help for this command.
+  app?: string@scoopAllApps # app that will be shown
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -220,7 +360,7 @@ export extern "scoop cat" [
 
 # Performs a series of diagnostic tests to try to identify things that may cause problems with Scoop.
 export extern "scoop checkup" [
-  --help(-h)  # Show help for this command.
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -229,8 +369,8 @@ export extern "scoop checkup" [
 
 # Opens the app homepage
 export extern "scoop home" [
-  app: string@scoopAllApps # app that will be shown
-  --help(-h)               # Show help for this command.
+  app?: string@scoopAllApps # app that will be shown
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -239,31 +379,36 @@ export extern "scoop home" [
 
 # Get or set configuration values
 export extern "scoop config" [
-  --help(-h) # Show help for this command.
+  --help (-h) # Show help for this command.
 ]
 
 # External 7zip (from path) will be used for archives extraction.
-export extern "scoop config 7ZIPEXTRACT_USE_EXTERNAL" [
+export extern "scoop config use_external_7zip" [
   value?: string@scoopBooleans
 ]
 
 # Prefer lessmsi utility over native msiexec.
-export extern "scoop config MSIEXTRACT_USE_LESSMSI" [
+export extern "scoop config use_lessmsi" [
   value?: string@scoopBooleans
 ]
 
-# The 'current' version alias will not be used. Shims and shortcuts will point to specific version instead.
-export extern "scoop config NO_JUNCTIONS" [
+# Use SQLite database for caching.
+export extern "scoop config use_sqlite_cache" [
   value?: string@scoopBooleans
 ]
 
-# Git repository containining scoop source code.
-export extern "scoop config SCOOP_REPO" [
+# The 'current' version alias will not be used.
+export extern "scoop config no_junction" [
+  value?: string@scoopBooleans
+]
+
+# Git repository containing scoop source code.
+export extern "scoop config scoop_repo" [
   value?: string@scoopRepos
 ]
 
 # Allow to use different branch than master.
-export extern "scoop config SCOOP_BRANCH" [
+export extern "scoop config scoop_branch" [
   value?: string@scoopBranches
 ]
 
@@ -272,7 +417,12 @@ export extern "scoop config proxy" [
   value?: string
 ]
 
-# Allow to configure preferred architecture for application installation. If not specified, architecture is determined be system.
+# When a conflict is detected during updating, Scoop will auto-stash the uncommitted changes.
+export extern "scoop config autostash_on_conflict" [
+  value?: string@scoopBooleans
+]
+
+# Allow to configure preferred architecture for application installation. If not specified, architecture is determined by system.
 export extern "scoop config default_architecture" [
   value?: string@scoopArches
 ]
@@ -293,7 +443,7 @@ export extern "scoop config show_update_log" [
 ]
 
 # Displays the manifest of every app that's about to be installed, then asks user if they wish to proceed.
-export extern "scoop config manifest_review" [
+export extern "scoop config show_manifest" [
   value?: string@scoopBooleans
 ]
 
@@ -303,17 +453,17 @@ export extern "scoop config shim" [
 ]
 
 # Path to Scoop root directory.
-export extern "scoop config rootPath" [
+export extern "scoop config root_path" [
   value?: directory
 ]
 
 # Path to Scoop root directory for global apps.
-export extern "scoop config globalPath" [
+export extern "scoop config global_path" [
   value?: directory
 ]
 
 # For downloads, defaults to 'cache' folder under Scoop root directory.
-export extern "scoop config cachePath" [
+export extern "scoop config cache_path" [
   value?: directory
 ]
 
@@ -342,6 +492,21 @@ export extern "scoop config private_hosts" [
   value?: string
 ]
 
+# Disable/Hold Scoop self-updates, until the specified date.
+export extern "scoop config hold_update_until" [
+  value?: string
+]
+
+# Nightly version will be updated after one day if this is set to $true.
+export extern "scoop config update_nightly" [
+  value?: string@scoopBooleans
+]
+
+# When set to $true, Scoop will use `SCOOP_PATH` environment variable to store apps' `PATH`s.
+export extern "scoop config use_isolated_path" [
+  value?: string@scoopBooleans
+]
+
 # Aria2c will be used for downloading of artifacts.
 export extern "scoop config aria2-enabled" [
   value?: string@scoopBooleans
@@ -357,7 +522,7 @@ export extern "scoop config aria2-retry-wait" [
   value?: number
 ]
 
-# Number of connections used for downlaod.
+# Number of connections used for download.
 export extern "scoop config aria2-split" [
   value?: number
 ]
@@ -367,7 +532,7 @@ export extern "scoop config aria2-max-connection-per-server" [
   value?: number
 ]
 
-# Downloaded files will be splitted by this configured size and downloaded using multiple connections.
+# Downloaded files will be split by this configured size and downloaded using multiple connections.
 export extern "scoop config aria2-min-split-size" [
   value?: string
 ]
@@ -379,7 +544,8 @@ export extern "scoop config aria2-options" [
 
 # Remove a configuration setting
 export extern "scoop config rm" [
-  name: string@scoopConfigs # app that will be removed
+  name: string@scoopConfigs # configuration setting that will be removed
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -388,9 +554,9 @@ export extern "scoop config rm" [
 
 # Hold an app to disable updates
 export extern "scoop hold" [
-  app: string@scoopInstalledApps # app that will be hold back
-  --global(-g) # Hold globally installed apps
-  --help(-h)   # Show help for this command.
+  app?: string@scoopInstalledApps # app that will be hold back
+  --global (-g) # Hold globally installed apps
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -399,9 +565,9 @@ export extern "scoop hold" [
 
 # Unhold an app to enable updates
 export extern "scoop unhold" [
-  app: string@scoopInstalledApps # app that will be unhold back
-  --global(-g) # Unhold globally installed apps
-  --help(-h)   # Show help for this command.
+  app?: string@scoopInstalledApps # app that will be unhold back
+  --global (-g) # Unhold globally installed apps
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -410,9 +576,9 @@ export extern "scoop unhold" [
 
 # List dependencies for an app, in the order they'll be installed
 export extern "scoop depends" [
-  app: string@scoopAllApps       # app in question
-  --arch(-a): string@scoopArches # Use the specified architecture, if the application's manifest supports it.
-  --help(-h)                     # Show help for this command.
+  app?: string@scoopAllApps # app in question
+  --arch (-a): string@scoopArches # Use the specified architecture, if the application's manifest supports it.
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -421,8 +587,8 @@ export extern "scoop depends" [
 
 # Exports installed apps, buckets (and optionally configs) in JSON format
 export extern "scoop export" [
-  --config(-c) # Export the Scoop configuration file too
-  --help(-h)   # Show help for this command.
+  --config (-c) # Export the Scoop configuration file too
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -432,7 +598,7 @@ export extern "scoop export" [
 # Imports apps, buckets and configs from a Scoopfile in JSON format
 export extern "scoop import" [
   file: path # path to Scoopfile
-  --help(-h) # Show help for this command.
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -441,9 +607,9 @@ export extern "scoop import" [
 
 # Reset an app to resolve conflicts
 export extern "scoop reset" [
-  app: string@scoopInstalledAppsWithStar # app that will be reset
-  --all(-a)  # Reset all apps. (alternative to '*')
-  --help(-h) # Show help for this command.
+  app?: string@scoopInstalledAppsWithStar # app that will be reset
+  --all (-a) # Reset all apps. (alternative to '*')
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -452,8 +618,8 @@ export extern "scoop reset" [
 
 # Returns the path to the specified app
 export extern "scoop prefix" [
-  app: string@scoopInstalledApps # app in question
-  --help(-h) # Show help for this command.
+  app?: string@scoopInstalledApps # app in question
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -463,7 +629,7 @@ export extern "scoop prefix" [
 # Create a custom app manifest
 export extern "scoop create" [
   url: string # url of manifest
-  --help(-h)  # Show help for this command.
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -471,24 +637,46 @@ export extern "scoop create" [
 ################################################################
 
 # Search available apps
-export extern "scoop search" [
+export def "scoop search" [
   query?: string # Show app names that match the query
-  --help(-h)     # Show help for this command.
-]
+] {
+    let output = (
+    ^scoop search ($query | default "")
+    | complete
+    | if $in.exit_code == 0 {
+      $in.stdout
+      | lines
+      | skip 4
+      | parse -r '(?P<name>\S+)\s+(?P<version>\S+)\s+(?P<source>\S+)\s+(?P<binaries>.+)?'
+    }
+  )
+
+  if ($output | is-empty) {
+    print $"(ansi yellow)WARN  No matches found."
+  } else {
+    $output
+  }
+}
 
 ################################################################
 # scoop cache ...
 ################################################################
 
 # Show the download cache
+export extern "scoop cache" [
+  apps: string@scoopInstalledAppsWithStar # apps in question
+  --help (-h) # Show help for this command.
+]
+
+# Show the download cache
 export extern "scoop cache show" [
-  ...?apps: string@scoopInstalledAppsWithStar # apps in question
+  apps: string@scoopInstalledAppsWithStar # apps in question
 ]
 
 # Clear the download cache
 export extern "scoop cache rm" [
-  ...?apps: string@scoopInstalledAppsWithStar # apps in question
-  --all(-a)  # Clear all apps (alternative to '*')
+  apps?: string@scoopInstalledAppsWithStar # apps in question
+  --all (-a) # Clear all apps (alternative to '*')
 ]
 
 ################################################################
@@ -498,11 +686,11 @@ export extern "scoop cache rm" [
 # Download apps in the cache folder and verify hashes
 export extern "scoop download" [
   app?: string@scoopAvailableApps # apps in question
-  --help(-h)                      # Show help for this command.
-  --force(-f)                     # Force download (overwrite cache)
-  --no-hash-check(-h)             # Skip hash verification (use with caution!)
-  --no-update-scoop(-u)           # Don't update Scoop before downloading if it's outdated
-  --arch(-a): string@scoopArches  # Use the specified architecture, if the app supports it
+  --help (-h) # Show help for this command.
+  --force (-f) # Force download (overwrite cache)
+  --no-hash-check (-h) # Skip hash verification (use with caution!)
+  --no-update-scoop (-u) # Don't update Scoop before downloading if it's outdated
+  --arch (-a): string@scoopArches # Use the specified architecture, if the app supports it
 ]
 
 ################################################################
@@ -510,48 +698,53 @@ export extern "scoop download" [
 ################################################################
 
 def scoopKnownBuckets [] {
- [ "main", "extras", "versions", "nirsoft", "php", "nerd-fonts", "nonportable", "java", "games" ]
+  ["main" "extras" "versions" "nirsoft" "php" "nerd-fonts" "nonportable" "java" "games" "sysinternals"]
 }
 
 def scoopInstalledBuckets [] {
-  let bucketsDir = if ('SCOOP' in (env).name) { [ (getenv 'SCOOP'), 'buckets' ] | path join } else { [ (getenv 'USERPROFILE'), 'scoop', 'buckets' ] | path join }
-  let buckets    = (ls $bucketsDir | get name | path basename)
+  let bucketsDir = if ('SCOOP' in $env) {
+    [$env.SCOOP 'buckets'] | path join
+  } else {
+    [$env.USERPROFILE 'scoop' 'buckets'] | path join
+  }
+
+  let buckets = (ls $bucketsDir | get name | path basename)
   $buckets
 }
 
 def scoopAvailableBuckets [] {
-  let known     = (scoopKnownBuckets)
+  let known = (scoopKnownBuckets)
   let installed = (scoopInstalledBuckets)
 
-  $known | where not $it in $installed
+  $known | where $it not-in $installed
 }
 
 # Add, list or remove buckets.
 export extern "scoop bucket" [
-  --help(-h) # Show help for this command.
+  --help (-h) # Show help for this command.
 ]
 
 # add a bucket
 export extern "scoop bucket add" [
-  name:  string@scoopAvailableBuckets # name of the bucket
-  repo?: string                       # url of git repo
-  --help(-h)                          # Show help for this command.
+  name: string@scoopAvailableBuckets # name of the bucket
+  repo?: string # url of git repo
+  --help (-h) # Show help for this command.
 ]
 
 # list installed buckets
 export extern "scoop bucket list" [
-  --help(-h) # Show help for this command.
+  --help (-h) # Show help for this command.
 ]
 
 # list known buckets
 export extern "scoop bucket known" [
-  --help(-h) # Show help for this command.
+  --help (-h) # Show help for this command.
 ]
 
 # remove installed buckets
 export extern "scoop bucket rm" [
   name: string@scoopInstalledBuckets # bucket to be removed
-  --help(-h) # Show help for this command.
+  --help (-h) # Show help for this command.
 ]
 
 ################################################################
@@ -560,11 +753,11 @@ export extern "scoop bucket rm" [
 
 # Look for app's hash or url on virustotal.com
 export extern "scoop virustotal" [
-  ...apps: string@scoopInstalledAppsWithStar # app to be scanned
-  --all(-a)             # Check for all installed apps
-  --scan(-s)            # Send download URL for analysis (and future retrieval).
-  --no-depends(-n)      # By default, all dependencies are checked too. This flag avoids it.
-  --no-update-scoop(-u) # Don't update Scoop before checking if it's outdated
-  --passthru(-p)        # Return reports as objects
-  --help(-h)            # Show help for this command.
+  apps: string@scoopInstalledAppsWithStar # apps to be scanned
+  --all (-a) # Check for all installed apps
+  --scan (-s) # Send download URL for analysis (and future retrieval).
+  --no-depends (-n) # By default, all dependencies are checked too. This flag avoids it.
+  --no-update-scoop (-u) # Don't update Scoop before checking if it's outdated
+  --passthru (-p) # Return reports as objects
+  --help (-h) # Show help for this command.
 ]
